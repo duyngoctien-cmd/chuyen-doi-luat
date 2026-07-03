@@ -14,7 +14,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Cai dat phan mem ho tro
+      - name: Cai dat cac công cu (OCR & Word)
         run: |
           sudo apt-get update
           sudo apt-get install -y tesseract-ocr tesseract-ocr-vie libtesseract-dev poppler-utils antiword
@@ -28,7 +28,7 @@ jobs:
           from docx import Document
 
           for file in os.listdir("."):
-              # Xu ly file PDF (OCR)
+              # Xu ly file PDF (OCR cho file scan)
               if file.endswith(".pdf"):
                   md_name = file.replace(".pdf", ".md")
                   images = convert_from_path(file)
@@ -47,7 +47,7 @@ jobs:
                       for para in doc.paragraphs:
                           f.write(para.text + "\n\n")
 
-              # Xu ly file DOC (can dung antiword)
+              # Xu ly file DOC (Dung antiword)
               elif file.endswith(".doc"):
                   md_name = file.replace(".doc", ".md")
                   os.system(f"antiword '{file}' > '{md_name}'")

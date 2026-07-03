@@ -1,0 +1,48 @@
+name: Tu dong chuyen PDF sang Markdown
+
+on:
+  push:
+    paths:
+      - '*.pdf'
+
+jobs:
+  convert-pdf-to-md:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Kiem tra nguon
+        uses: actions/checkout@v4
+
+      - name: Cai dat Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Cai dat thu vien
+        run: pip install pypdf
+
+      - name: Chuyen doi file
+        run: |
+          import os
+          import pypdf
+
+          for file in os.listdir("."):
+              if file.endswith(".pdf"):
+                  md_name = file.replace(".pdf", ".md")
+                  reader = pypdf.PdfReader(file)
+                  
+                  with open(md_name, "w", encoding="utf-8") as f:
+                      f.write(f"# TAI LIEU GOC: {file}\n\n")
+                      for i, page in enumerate(reader.pages):
+                          text = page.extract_text()
+                          f.write(f"## --- TRANG {i+1} ---\n\n")
+                          f.write(text if text else "*[Trang nay khong co chu]*")
+                          f.write("\n\n")
+        shell: python
+
+      - name: Luu file md nguoc lai GitHub
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action Bot"
+          git add *.md
+          git commit -m "Tu dong cap nhat file md" || exit 0
+          git push

@@ -1,42 +1,57 @@
-name: Tu dong chuyen PDF sang Markdown
+name: Tu dong chuyen PDF va Word sang Markdown
 
 on:
   push:
     paths:
       - '*.pdf'
+      - '*.doc'
+      - '*.docx'
 
 jobs:
-  convert-pdf-to-md:
+  convert-to-md:
     runs-on: ubuntu-latest
     steps:
-      - name: Kiem tra nguon
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Cai dat Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-
-      - name: Cai dat thu vien
-        run: pip install pypdf
+      - name: Cai dat phan mem ho tro
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tesseract-ocr tesseract-ocr-vie libtesseract-dev poppler-utils antiword
+          pip install pytesseract pdf2image python-docx
 
       - name: Chuyen doi file
         run: |
           import os
-          import pypdf
+          from pdf2image import convert_from_path
+          import pytesseract
+          from docx import Document
 
           for file in os.listdir("."):
+              # Xu ly file PDF (OCR)
               if file.endswith(".pdf"):
                   md_name = file.replace(".pdf", ".md")
-                  reader = pypdf.PdfReader(file)
-                  
+                  images = convert_from_path(file)
                   with open(md_name, "w", encoding="utf-8") as f:
-                      f.write(f"# TAI LIEU GOC: {file}\n\n")
-                      for i, page in enumerate(reader.pages):
-                          text = page.extract_text()
-                          f.write(f"## --- TRANG {i+1} ---\n\n")
-                          f.write(text if text else "*[Trang nay khong co chu]*")
-                          f.write("\n\n")
+                      f.write(f"# TAI LIEU GOC (PDF): {file}\n\n")
+                      for i, image in enumerate(images):
+                          text = pytesseract.image_to_string(image, lang='vie')
+                          f.write(f"## --- TRANG {i+1} ---\n\n{text}\n\n")
+
+              # Xu ly file DOCX
+              elif file.endswith(".docx"):
+                  md_name = file.replace(".docx", ".md")
+                  doc = Document(file)
+                  with open(md_name, "w", encoding="utf-8") as f:
+                      f.write(f"# TAI LIEU GOC (DOCX): {file}\n\n")
+                      for para in doc.paragraphs:
+                          f.write(para.text + "\n\n")
+
+              # Xu ly file DOC (can dung antiword)
+              elif file.endswith(".doc"):
+                  md_name = file.replace(".doc", ".md")
+                  os.system(f"antiword '{file}' > '{md_name}'")
+
         shell: python
 
       - name: Luu file md nguoc lai GitHub
@@ -44,5 +59,5 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action Bot"
           git add *.md
-          git commit -m "Tu dong cap nhat file md" || exit 0
+          git commit -m "Tu dong chuyen doi PDF/Word sang Markdown" || exit 0
           git push
